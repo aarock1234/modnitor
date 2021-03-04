@@ -23,8 +23,8 @@ module.exports = {
                             value: 'Supreme',
                         },
                         {
-                            name: 'Script URL',
-                            value: script.url,
+                            name: 'Mod Value',
+                            value: JSON.stringify(script.modValue),
                         },
                         {
                             name: 'Script SHA256 Checksum',

@@ -1,4 +1,4 @@
 {
-    "delay": 1000, 
-    "webhook": ""
+    "delay": 10000, 
+    "webhook": "https://discord.com/api/webhooks/817124404341375036/_SjTKW1tsGpdZELs-Ciowr2tqYW8XbPhSWkLUcHGULtKbZMMh3Z0JRTm8QyXu1fNqwfN"
 }

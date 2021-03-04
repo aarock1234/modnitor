@@ -1,9 +1,9 @@
-## Supreme Ticket Monitor
-Hello, I am [Rock](https://www.twitter.com/rockkdev) from the team at [StormeIO](https://www.twitter.com/stormeio) and I have decided to open-source a simple project of mine. It scans and waits for any changes on Supreme's website's scripts. Any script that changes or is added/removed will be sent to a webhook provided in the *config.json* file. I kindly ask you to not steal the code and rebrand it, at minimum keep the footer message.
+## Supreme Mod Monitor
+Hello, I am [Rock](https://www.twitter.com/rockkdev) from the team at [StormeIO](https://www.twitter.com/stormeio) and I have created this open-source mod.js monitor. It scans and waits for any changes on Supreme's mod.js file. Any changes to the mobile paramater will be sent to a webhook provided in the *config.json* file. I kindly ask you to not steal the code and rebrand it, at minimum keep the footer message.
 
 ## Example Images
 
-![Unable to Load Preview.](https://i.imgur.com/gYW0Sy3.png)
+![Unable to Load Preview.](https://i.imgur.com/lwiOxbx.png)
 
 
 ## Installation & Usage
@@ -17,10 +17,10 @@ Hello, I am [Rock](https://www.twitter.com/rockkdev) from the team at [StormeIO]
 >> https://git-scm.com/downloads
 >
 > 3. Next, you need to open your terminal/command prompt. On windows press *Windows Key* and then type `cmd` and click enter. On Mac open Terminal *(its pre-installed)*. Now type this:
->> `git clone https://github.com/aarock1234/ticket-monitor`
+>> `git clone https://github.com/aarock1234/modnitor`
 >
 > 4. After it has completed you must type this:
->> `cd ticket-monitor`
+>> `cd modnitor`
 >
 > 5. Now you can open up the file explorer using the command `explorer` on Windows and `open .` on a Mac *(don't forget the `.` after open)*.
 > 6. Now navigate to the user folder.
@@ -37,9 +37,8 @@ Hello, I am [Rock](https://www.twitter.com/rockkdev) from the team at [StormeIO]
 ## Extra
 
 ### Planned Additions
-* Support for multiple sites.
-* More data on each file.
-* Option to ignore "non-important" files.
+* More data on each mod file.
+* Monitor desktop mod functions/checkout mod functions.
 
 ### Development
 

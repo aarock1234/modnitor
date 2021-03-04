@@ -17,7 +17,8 @@ const request = require('request-promise').defaults({
     headers: safeHeaders
 });
 const crypto = require('crypto');
-const cheerio = require('cheerio');
+const esprima = require('esprima');
+const { walkAddParent: esprimaWalk } = require('esprima-walk');
 const events = require('events');
 
 const {
@@ -26,17 +27,20 @@ const {
 } = require('./utils/tools');
 
 const config = require('../user/config.json');
+const { resolve } = require('path');
 
 class Monitor extends events {
     constructor() {
         super();
 
-        this.previousLoop = [];
-        this.currentLoop = [];
+        this.previousChecksum = null;
+        this.modContents = null;
 
         this.proxies = [];
 
-        this.updateInterval = null;
+        this.updateInterval = setInterval(() => {
+            console.log(`Still monitoring! @ ${new Date()}`)
+        }, 1800000); // Status every 30 minutes
 
         this.initProxies();
     }
@@ -45,131 +49,52 @@ class Monitor extends events {
         require('fs').readFileSync(__dirname + '/../user/proxies.txt', 'utf-8')
             .split(/\r?\n/).forEach(line => this.proxies.push(line));
 
-        this.initMonitor();
+        this.monitorLoop();
     }
 
-    initMonitor = async () => {
-        console.log('Initializing Monitor...');
-        
+    findMobileMod = async () => {
+        const parsedMod = esprima.parse(this.modContents);
+
+        return new Promise(resolve => {
+            esprimaWalk(parsedMod, node => {
+                if (node.type == 'ObjectExpression') {
+                    const property = node.properties[0];
+                    resolve({
+                        [`${property.key.value}`]: property.value.value
+                    })
+                }
+            })
+        })
+    }
+
+    monitorLoop = async () => {
         if (this.proxies.length == 0) return console.log('ERR: Please add proxies.');
 
         if (!config.delay || !config.webhook) return console.log('ERR: Please configure your config.json');
 
         try {            
-            let response = await request({
-                url: 'https://www.supremenewyork.com/shop/all',
-                proxy: this.getProxy()
-            })
-    
-            let $ = cheerio.load(response.body);
+            let shaChecksum = await this.getChecksum('https://www.supremenewyork.com/mod.js');
 
-            /**
-             * Cool little way to wait for the loop to finish ;)
-             */
+            if (this.previousChecksum == null) {
+                console.log(`Initialized Monitor: ${shaChecksum}`);
+                this.previousChecksum = shaChecksum;
+            }
 
-            let promiseList = [];
-    
-            $('script').each(async (i, e) => {
-                if (!e.attribs['src']) return;
+            if (this.previousChecksum != shaChecksum) {
+                const modValue = await this.findMobileMod();
 
-                if (e.attribs['src'].indexOf('google') != -1) return;
-    
-                let _shaChecksum = async (_this) => {
-                    let shaChecksum = await _this.getChecksum(e.attribs[ 'src' ]);
-
-                    // @DEBUG: console.log(shaChecksum, ' - ', e.attribs[ 'src' ]);
-        
-                    await _this.previousLoop.push({
-                        url: e.attribs[ 'src' ],
-                        shaChecksum: shaChecksum
-                    });
-                }
-
-                promiseList.push(_shaChecksum(this));
-            })
-
-            Promise.all(promiseList)
-                .then(() => {
-                    console.log('Monitoring...');
-
-                    if (!this.updateInterval)
-                        this.updateInterval = setInterval(() => 
-                                console.log(`Still Here @ ${new Date().toISOString()}`)
-                                , 1800000);
-
-                    return this.monitorLoop();
+                this.emit('newMod', {
+                    shaChecksum,
+                    modValue
                 })
-                
+            }
+
+            await sleep(config.delay);
+            return this.monitorLoop();
         } catch (e) {
             console.log(`ERR: ${e.message}`);
             await sleep(config.delay);
-            return this.initMonitor();
-        }
-    }
-
-    monitorLoop = async () => {
-        try {
-            let response = await request({
-                url: 'https://www.supremenewyork.com/shop/all',
-                proxy: this.getProxy()
-            })
-    
-            let $ = cheerio.load(response.body);
-
-            /**
-             * Cool little way to wait for the loop to finish ;)
-             */
-
-            let promiseList = [];
-    
-            $('script').each(async (i, e) => {
-                if (!e.attribs['src']) return;
-
-                if (e.attribs['src'].indexOf('google') != -1) return;
-    
-                let _shaChecksum = async (_this) => {
-                    let shaChecksum = await _this.getChecksum(e.attribs[ 'src' ]);
-
-                    // @DEBUG: console.log(shaChecksum, ' - ', e.attribs[ 'src' ]);
-
-                    let currentScript = {
-                        url: e.attribs[ 'src' ],
-                        shaChecksum: shaChecksum
-                    }
-
-                    await _this.currentLoop.push(currentScript);
-
-                    let matchedScript = _this.previousLoop.find(script => script.url == currentScript.url);
-
-                    if (!matchedScript)
-                        _this.emit('added', currentScript);
-                    else if (matchedScript.shaChecksum != currentScript.shaChecksum)
-                        _this.emit('edited', currentScript);
-                }
-
-                promiseList.push(_shaChecksum(this));
-            })
-
-            Promise.all(promiseList)
-                .then(async () => {    
-                    await this.previousLoop.forEach(async previousScript => {
-                        let removedScript = this.currentLoop.find(script => script.url == previousScript.url);
-
-                        if (!removedScript)
-                            this.emit('removed', previousScript);
-                    })
-
-                    this.previousLoop = this.currentLoop;
-                    this.currentLoop = [];
-
-                    await sleep(config.delay);
-                    return this.monitorLoop();
-                })
-                
-        } catch (e) {
-            console.log(`ERR: ${e.message}`);
-            await sleep(config.delay);
-            return this.initMonitor();
+            return this.monitorLoop();
         }
     }
 
@@ -188,6 +113,8 @@ class Monitor extends events {
             shaChecksum = crypto.createHash('sha256')
                                 .update(response.body)
                                 .digest('hex');
+
+            this.modContents = response.body;
 
             return shaChecksum;
         } catch (e) {
